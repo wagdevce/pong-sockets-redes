@@ -21,7 +21,8 @@ player.midright = (screen_width, screen_height/2)
 
 ball_speed_x = 6
 ball_speed_y = 6
-player_speed = 0 # Adicionado: Inicialização da velocidade do player
+player_speed = 0 #  Inicialização da velocidade do player
+cpu_speed = 6
 
 # 3. Animações e física
 def animate_ball():
@@ -29,6 +30,7 @@ def animate_ball():
     
     # Move a bola
     ball.x += ball_speed_x
+    
     ball.y += ball_speed_y
 
     # Física: Bater em cima e embaixo 
@@ -41,12 +43,25 @@ def animate_ball():
 
 def animate_player():
     player.y += player_speed
-    
-    # Mantém o jogador dentro da tela
+     # Mantém o jogador dentro da tela
     if player.top <= 0:
         player.top = 0
+   
     if player.bottom >= screen_height:
         player.bottom = screen_height
+
+def animate_cpu():
+    cpu.y += cpu_speed
+
+    if ball.centery <= cpu.centery:
+        cpu_speed = -6
+    if ball.centery >= cpu.centery:
+        cpu_speed = 6
+
+    if cpu.top <= 0:
+        cpu.top = 0
+    if cpu.bottom >= screen_height:
+        cpu.bottom = screen_height
 
 # 4. Loop Principal
 while True:
@@ -54,20 +69,33 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()  
+    
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
                 player_speed = -7
             if event.key == pygame.K_DOWN:
                 player_speed = 7
+    
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_UP:
                 player_speed = 0
             if event.key == pygame.K_DOWN:
                 player_speed = 0       
 
-    animate_ball() 
+    animate_ball() #Chamada de função animação da bola
     animate_player() # Chamada da função de animação do player
+    cpu.y += cpu_speed
+
+    if ball.centery <= cpu.centery:
+        cpu_speed = -6 
+    if ball.centery >= cpu.centery:
+        cpu_speed = 6
     
+    if cpu.top <= 0:
+        cpu.top = 0
+    if cpu.bottom >= screen_height:
+        cpu.bottom = screen_height
+
     screen.fill('black')
     pygame.draw.aaline(screen,'white',(screen_width/2,0), (screen_width/2, screen_height))
     pygame.draw.ellipse(screen,'white',ball)
