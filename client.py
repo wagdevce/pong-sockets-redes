@@ -28,6 +28,18 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
+        # Envia comandos para o servidor quando teclas são pressionadas
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                client_socket.send("UP".encode()) # Envia "UP" em bytes
+            if event.key == pygame.K_DOWN:
+                client_socket.send("DOWN".encode()) # Envia "DOWN" em bytes
+        
+        # Envia comando de PARAR quando a tecla é solta
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
+                client_socket.send("STOP".encode())
+    
 
     try:
         # 1. Recebimento de Dados

@@ -60,10 +60,23 @@ def animate_ball():
 
 def game_loop():
     """ Loop principal de processamento do servidor (Física + Broadcast) """
+    global player_speed, cpu_speed # <--- Importante: Para ler a velocidade global
+    
     clock = pygame.time.Clock()
     while True:
-        # 1. Atualiza a física do jogo
+        # 1. Atualiza a física da bola
         animate_ball()
+        # Aplica a velocidade atual à posição Y
+        player.y += player_speed
+        cpu.y += cpu_speed
+
+        # Mantém as raquetes dentro da tela (Limites)
+        if player.top <= 0: player.top = 0
+        if player.bottom >= screen_height: player.bottom = screen_height
+        
+        if cpu.top <= 0: cpu.top = 0
+        if cpu.bottom >= screen_height: cpu.bottom = screen_height
+        # -----------------------------------------------------
         
         # 2. Prepara o pacote de dados (Estado atual do jogo)
         game_state = {
@@ -74,17 +87,36 @@ def game_loop():
         }
         
         # 3. Serialização e Broadcast
-        # Transforma o dicionário em bytes e envia para todos os clientes conectados.
         data = pickle.dumps(game_state)
         
         for client in clients:
             try:
                 client.send(data)
             except:
-                # Remove cliente se a conexão cair
                 clients.remove(client)
 
-        clock.tick(60) # Mantém a taxa de atualização lógica a 60 FPS
+        clock.tick(60)
+
+def handle_client_input(client_socket):
+    global player_speed
+    while True:
+        try:
+            # Recebe comandos de texto
+            request = client_socket.recv(1024).decode()
+            
+            if not request: break
+            
+            # Processa o comando recebido
+            if request == "UP":
+                player_speed = -6
+            elif request == "DOWN":
+                player_speed = 6
+            elif request == "STOP":
+                player_speed = 0
+                
+        except:
+            break
+    client_socket.close()    
 
 # Configuração de Rede
 def start_server():
@@ -100,7 +132,7 @@ def start_server():
     while True:
         conn, addr = server.accept()
         print(f"Nova conexão estabelecida: {addr}")
-        clients.append(conn) 
-
+        clients.append(conn)
+        threading.Thread(target=handle_client_input, args=(conn,)).start() 
 if __name__ == '__main__':
     start_server()
