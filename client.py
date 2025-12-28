@@ -23,7 +23,7 @@ try:
     
     # 2. Redimensiona para 30x30 (O tamanho que definimos no server.py)
     # O .convert_alpha() ajuda a manter a transparência e melhora a velocidade
-    ball_sprite = pygame.transform.scale(original_ball_img, (30, 30)).convert_alpha()
+    ball_sprite = pygame.transform.scale(original_ball_img, (50, 50)).convert_alpha()
     
     print("Sprite da bola carregado com sucesso!")
     using_sprites = True

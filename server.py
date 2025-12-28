@@ -2,19 +2,22 @@ import socket
 import threading
 import pygame
 import pickle 
+import random
 from datetime import datetime 
 
 # Configurações Gerais 
 screen_width = 1280
 screen_height = 700
-WINNING_SCORE = 5 
+Winning_Score = 5 
+Initial_Speed = 6 
+Max_Speed = 15 
 
 # Inicialização do Pygame (utilizado apenas para cálculos geométricos da classe Rect)
 pygame.init()
 
 # Estado Global do Jogo
 # Definição das coordenadas e dimensões dos objetos (Bola e Raquetes)
-ball = pygame.Rect(0,0,30,30)
+ball = pygame.Rect(0,0,50,50)
 ball.center = (screen_width/2, screen_height/2)
 
 cpu = pygame.Rect(0,0,20,100) 
@@ -47,10 +50,17 @@ def save_score(winner_name):
 
 # Lógica de Física e Regras
 def reset_ball():
-    """ Reinicia a posição da bola no centro da tela e inverte a direção horizontal. """
+    #Reinicia a posição da bola no centro da tela e inverte a direção horizontal
     global ball_speed_x, ball_speed_y
     ball.center = (screen_width/2, screen_height/2)
-    ball_speed_x *= -1
+    
+    # Define a direção aleatória onde a bola vai no começo (esquerda ou direita)
+    direction_x = random.choice([1, -1])
+    direction_y = random.choice([1 ,-1])
+
+    # Reseta para a velocidade inicial
+    ball_speed_x = Initial_Speed * direction_x
+    ball_speed_y = Initial_Speed * direction_y
 
 def animate_ball():
     """ Calcula a movimentação da bola, colisões com bordas/raquetes e pontuação. """
@@ -71,14 +81,14 @@ def animate_ball():
     # Verificação de Pontuação e Condição de Vitória
     if ball.right >= screen_width:
         cpu_points += 1
-        if cpu_points >= WINNING_SCORE:
+        if cpu_points >= Winning_Score:
             winner = "Jogador 2 (Esq)"
             save_score(winner)
         reset_ball()
         
     if ball.left <= 0:
         player_points += 1
-        if player_points >= WINNING_SCORE:
+        if player_points >= Winning_Score:
             winner = "Jogador 1 (Dir)"
             save_score(winner)
         reset_ball()
@@ -86,6 +96,13 @@ def animate_ball():
     # Colisão com as Raquetes
     if ball.colliderect(player) or ball.colliderect(cpu):
         ball_speed_x *= -1
+
+        #Aumenta velocidade em 10% toda vez que a bola bater na raquete
+        ball_speed_x *= 1.1
+        ball_speed_y *= 1.1
+
+        ball_speed_x = max(-Max_Speed, min(ball_speed_x, Max_Speed))
+        ball_speed_y = max(-Max_Speed, min(ball_speed_y, Max_Speed))
 
 def game_loop():
     """ 
