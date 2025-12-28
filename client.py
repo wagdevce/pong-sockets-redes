@@ -20,14 +20,20 @@ lobby_font = pygame.font.Font(None, 60)
 try:
     # 1. Carrega a imagem da pasta assets
     original_ball_img = pygame.image.load('assets/ball.png')
+    original_bg_img = pygame.image.load('assets/background.png')
     
-    # 2. Redimensiona para 30x30 (O tamanho que definimos no server.py)
+    # 2. Redimensiona para 50x50 (O tamanho que definimos no server.py)
     # O .convert_alpha() ajuda a manter a transparência e melhora a velocidade
     ball_sprite = pygame.transform.scale(original_ball_img, (50, 50)).convert_alpha()
+    bg_sprite = pygame.transform.scale(original_bg_img, (screen_width, screen_height)).convert()
+    print("Background carregado!")
+    has_background = True
     
     print("Sprite da bola carregado com sucesso!")
     using_sprites = True
 except Exception as e:
+    print("Aviso: 'assets/background.png' não encontrado. Usando fundo preto.")
+    has_background = False
     print(f"Aviso: Não foi possível carregar 'bola.png'. Usando bolinha branca padrão. Erro: {e}")
     using_sprites = False
 
@@ -74,8 +80,13 @@ while True:
         scores = game_state['score'] 
         ranking_list = game_state.get('ranking', [])
 
-        screen.fill('black')
-
+        # 1. DESENHA O FUNDO (A primeira camada)
+        if has_background and using_sprites:
+            # Desenha a imagem do espaço na posição (0,0)
+            screen.blit(bg_sprite, (0,0))
+        else:
+            # Se não tiver imagem, pinta de preto (fallback)
+            screen.fill('black')
         # 3. Renderização Condicional (Máquina de Estados Visual)
         
         if status == "WAITING":
