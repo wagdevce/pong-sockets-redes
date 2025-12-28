@@ -2,7 +2,7 @@ import pygame
 import socket
 import pickle 
 
-# Configurações Visuais 
+# Inicialização Gráfica
 pygame.init()
 screen_width = 1280
 screen_height = 700
@@ -10,57 +10,72 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Pong Multiplayer")
 
 clock = pygame.time.Clock()
+# Definição de fontes para diferentes estados do jogo
 font = pygame.font.Font(None, 100)
 victory_font = pygame.font.Font(None, 80)
 ranking_font = pygame.font.Font(None, 40)
+lobby_font = pygame.font.Font(None, 60)
 
-# Conexão de Rede 
+# Configuração de Rede 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try:
-    # Conecta ao servidor (Alterar IP conforme necessário)
+    # Conexão TCP com o servidor (IP local hardcoded para testes)
     client_socket.connect(('127.0.0.1', 5555))
-    print("Conectado ao servidor.")
+    print("Conectado ao servidor com sucesso.")
 except Exception as e:
-    print(f"Erro de conexão: {e}")
+    print(f"Falha na conexão: {e}")
     exit()
 
 # Loop Principal 
 while True:
-    # 1. Tratamento de Eventos e Input
+    # 1. Captura de Eventos (Input do Usuário)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
         
-        # Envia comandos de movimento
+        # Envio de comandos de movimentação via socket
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
                 client_socket.send("UP".encode())
             if event.key == pygame.K_DOWN:
                 client_socket.send("DOWN".encode())
         
-        # Envia comando de parada
+        # Envio de comando de parada ao soltar a tecla
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
                 client_socket.send("STOP".encode())
 
     try:
-        # 2. Recebimento de Dados
+        # 2. Recebimento e Deserialização de Dados
         data = client_socket.recv(4096) 
         if not data: break
 
-        # Deserialização do estado do jogo
         game_state = pickle.loads(data)
         
+        # Extração das variáveis de estado do pacote recebido
+        status = game_state.get('status', 'PLAYING') 
         winner = game_state.get('winner')
         scores = game_state['score'] 
         ranking_list = game_state.get('ranking', [])
 
-        # 3. Renderização
         screen.fill('black')
+
+        # 3. Renderização Condicional (Máquina de Estados Visual)
         
-        if winner:
-            # Tela de Fim de Jogo
+        if status == "WAITING":
+            # Estado: LOBBY (Aguardando segundo jogador)
+            text_wait = lobby_font.render("Aguardando Oponente...", True, "cyan")
+            rect_wait = text_wait.get_rect(center=(screen_width/2, screen_height/2))
+            
+            text_p1 = ranking_font.render("Conectado. Aguardando início da partida.", True, "gray")
+            rect_p1 = text_p1.get_rect(center=(screen_width/2, screen_height/2 + 50))
+
+            screen.blit(text_wait, rect_wait)
+            screen.blit(text_p1, rect_p1)
+        
+        elif winner:
+            # Estado: FIM DE JOGO (Exibe vencedor e ranking)
             text_win = victory_font.render(f"FIM DE JOGO!", True, "yellow")
             text_name = victory_font.render(f"Vencedor: {winner}", True, "green")
             
@@ -70,7 +85,6 @@ while True:
             rect_name = text_name.get_rect(center=(screen_width/2, 180))
             screen.blit(text_name, rect_name)
 
-            # Renderiza histórico do ranking
             text_rank = ranking_font.render("--- Histórico Recente ---", True, "white")
             screen.blit(text_rank, (screen_width/2 - 150, 250))
             
@@ -82,19 +96,16 @@ while True:
                 y_pos += 40
 
         else:
-            # Tela de Jogo Normal
-            # Extrai posições do pacote recebido
+            # Estado: JOGO EM ANDAMENTO (Renderização padrão)
             ball_rect = game_state['ball']
             player_rect = game_state['player']
             cpu_rect = game_state['cpu']
             
-            # Renderiza Placar
             cpu_text = font.render(str(scores[0]), True, "white")
             player_text = font.render(str(scores[1]), True, "white")
             screen.blit(cpu_text, (screen_width/4, 20))
             screen.blit(player_text, (3*screen_width/4, 20))
 
-            # Renderiza Objetos
             pygame.draw.aaline(screen, 'white', (screen_width/2, 0), (screen_width/2, screen_height))
             pygame.draw.ellipse(screen, 'white', ball_rect)
             pygame.draw.rect(screen, 'white', cpu_rect)
@@ -103,7 +114,7 @@ while True:
         pygame.display.update()
 
     except Exception as e:
-        print(f"Erro durante execução: {e}")
+        print(f"Erro de execução: {e}")
         break
 
 client_socket.close()
