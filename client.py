@@ -16,6 +16,21 @@ victory_font = pygame.font.Font(None, 80)
 ranking_font = pygame.font.Font(None, 40)
 lobby_font = pygame.font.Font(None, 60)
 
+# CARREGAMENTO DE SPRITES
+try:
+    # 1. Carrega a imagem da pasta assets
+    original_ball_img = pygame.image.load('assets/ball.png')
+    
+    # 2. Redimensiona para 30x30 (O tamanho que definimos no server.py)
+    # O .convert_alpha() ajuda a manter a transparência e melhora a velocidade
+    ball_sprite = pygame.transform.scale(original_ball_img, (30, 30)).convert_alpha()
+    
+    print("Sprite da bola carregado com sucesso!")
+    using_sprites = True
+except Exception as e:
+    print(f"Aviso: Não foi possível carregar 'bola.png'. Usando bolinha branca padrão. Erro: {e}")
+    using_sprites = False
+
 # Configuração de Rede 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try:
@@ -106,8 +121,14 @@ while True:
             screen.blit(cpu_text, (screen_width/4, 20))
             screen.blit(player_text, (3*screen_width/4, 20))
 
+
             pygame.draw.aaline(screen, 'white', (screen_width/2, 0), (screen_width/2, screen_height))
-            pygame.draw.ellipse(screen, 'white', ball_rect)
+            if using_sprites:
+                # Desenha a IMAGEM (Sprite)
+                screen.blit(ball_sprite, ball_rect)
+            else:
+                # Desenha a FORMA (Caso a imagem tenha falhado)
+                pygame.draw.ellipse(screen, 'white', ball_rect)
             pygame.draw.rect(screen, 'white', cpu_rect)
             pygame.draw.rect(screen, 'white', player_rect)
         
