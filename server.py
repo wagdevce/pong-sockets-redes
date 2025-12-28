@@ -104,6 +104,15 @@ def animate_ball():
         ball_speed_x = max(-Max_Speed, min(ball_speed_x, Max_Speed))
         ball_speed_y = max(-Max_Speed, min(ball_speed_y, Max_Speed))
 
+def reset_game():
+    """ Zera o placar e reinicia a partida """
+    global cpu_points, player_points, winner
+    cpu_points = 0
+    player_points = 0
+    winner = None
+    reset_ball()
+    print("Jogo reiniciado por solicitação de um jogador.")
+
 def game_loop():
     """ 
     Thread Principal: Gerencia o fluxo do jogo (Lobby/Partida), 
@@ -175,6 +184,10 @@ def handle_client_input(client_socket, player_id):
             # Recebe comandos de texto do cliente
             request = client_socket.recv(1024).decode()
             if not request: break
+            
+            #Verifica comando de RESET 
+            if request == "RESET":
+                reset_game()
             
             # Processa movimento apenas se não houver vencedor
             if winner is None:

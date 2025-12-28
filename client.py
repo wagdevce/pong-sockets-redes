@@ -15,6 +15,7 @@ font = pygame.font.Font(None, 100)
 victory_font = pygame.font.Font(None, 80)
 ranking_font = pygame.font.Font(None, 40)
 lobby_font = pygame.font.Font(None, 60)
+restart_font = pygame.font.Font(None, 50)
 
 # CARREGAMENTO DE SPRITES
 try:
@@ -62,6 +63,10 @@ while True:
             if event.key == pygame.K_DOWN:
                 client_socket.send("DOWN".encode())
         
+        # Só envia RESET se apertar ESPAÇO
+            if event.key == pygame.K_SPACE:
+                client_socket.send("RESET".encode())
+
         # Envio de comando de parada ao soltar a tecla
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
@@ -120,6 +125,11 @@ while True:
                 rect_line = line_surf.get_rect(center=(screen_width/2, y_pos))
                 screen.blit(line_surf, rect_line)
                 y_pos += 40
+            
+            # Pisca o texto ou apenas mostra estático
+            text_restart = restart_font.render("Pressione ESPAÇO para jogar novamente", True, "cyan")
+            rect_restart = text_restart.get_rect(center=(screen_width/2, screen_height - 100))
+            screen.blit(text_restart, rect_restart)
 
         else:
             # Estado: JOGO EM ANDAMENTO (Renderização padrão)
