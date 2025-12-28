@@ -1,15 +1,54 @@
 import pygame
 import socket
 import pickle 
+import os
+
+#  CONFIGURAÇÃO INICIAL DE CONEXÃO
+# Limpa o terminal para facilitar a leitura
+os.system('cls' if os.name == 'nt' else 'clear')
+
+print("="*50)
+print("       BEM-VINDO AO PONG MULTIPLAYER")
+print("="*50)
+print("Para jogar LOCAL (sozinho), apenas aperte ENTER.")
+print("Para jogar ONLINE, cole o endereço do Ngrok (ex: 0.tcp.sa.ngrok.io:12345).")
+print("-" * 50)
+
+server_ip = input("Digite o IP do Servidor: ").strip()
+
+# Definição de IP e Porta baseada na entrada
+if not server_ip:
+    server_ip = '127.0.0.1'
+    port = 5555
+    print(f"-> Modo Local selecionado: {server_ip}:{port}")
+else:
+    # Tratamento para endereços do Ngrok (host:porta)
+    if ':' in server_ip:
+        try:
+            ip_part, port_part = server_ip.split(':')
+            server_ip = ip_part
+            port = int(port_part)
+            print(f"-> Modo Online selecionado: {server_ip}:{port}")
+        except:
+            print("Formato inválido! Usando padrão local.")
+            server_ip = '127.0.0.1'
+            port = 5555
+    else:
+        port = 5555
+
+print("="*50)
+print("Iniciando o jogo...")
 
 # Inicialização Gráfica
 pygame.init()
 screen_width = 1280
 screen_height = 700
 screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Pong Multiplayer")
+# Atualiza o título da janela para mostrar onde estamos conectados
+pygame.display.set_caption(f"Pong Multiplayer - Conectado a {server_ip}:{port}")
 
 clock = pygame.time.Clock()
+
 # Definição de fontes para diferentes estados do jogo
 font = pygame.font.Font(None, 100)
 victory_font = pygame.font.Font(None, 80)
@@ -18,34 +57,43 @@ lobby_font = pygame.font.Font(None, 60)
 restart_font = pygame.font.Font(None, 50)
 
 # CARREGAMENTO DE SPRITES
+using_sprites = False
+has_background = False
+
 try:
     # 1. Carrega a imagem da pasta assets
-    original_ball_img = pygame.image.load('assets/ball.png')
-    original_bg_img = pygame.image.load('assets/background.png')
-    
-    # 2. Redimensiona para 50x50 (O tamanho que definimos no server.py)
-    # O .convert_alpha() ajuda a manter a transparência e melhora a velocidade
-    ball_sprite = pygame.transform.scale(original_ball_img, (50, 50)).convert_alpha()
-    bg_sprite = pygame.transform.scale(original_bg_img, (screen_width, screen_height)).convert()
-    print("Background carregado!")
-    has_background = True
-    
-    print("Sprite da bola carregado com sucesso!")
-    using_sprites = True
+    try:
+        original_ball_img = pygame.image.load('assets/ball.png')
+        # Redimensiona para 50x50 (O tamanho que definimos no server.py)
+        ball_sprite = pygame.transform.scale(original_ball_img, (50, 50)).convert_alpha()
+        using_sprites = True
+        print("Sprite da bola carregado com sucesso!")
+    except Exception as e:
+        print(f"Aviso: Não foi possível carregar 'bola.png'. Erro: {e}")
+
+    # 2. Carrega o Background
+    try:
+        original_bg_img = pygame.image.load('assets/background.png')
+        bg_sprite = pygame.transform.scale(original_bg_img, (screen_width, screen_height)).convert()
+        has_background = True
+        print("Background carregado!")
+    except Exception as e:
+        print(f"Aviso: 'assets/background.png' não encontrado. Usando fundo preto.")
+
 except Exception as e:
-    print("Aviso: 'assets/background.png' não encontrado. Usando fundo preto.")
-    has_background = False
-    print(f"Aviso: Não foi possível carregar 'bola.png'. Usando bolinha branca padrão. Erro: {e}")
+    print(f"Erro geral assets: {e}")
     using_sprites = False
 
 # Configuração de Rede 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try:
-    # Conexão TCP com o servidor (IP local hardcoded para testes)
-    client_socket.connect(('127.0.0.1', 5555))
+    # Conecta ao servidor usando as variáveis definidas no início (Local ou Ngrok)
+    client_socket.connect((server_ip, port))
     print("Conectado ao servidor com sucesso.")
 except Exception as e:
-    print(f"Falha na conexão: {e}")
+    print(f"Falha na conexão com {server_ip}:{port}")
+    print(f"Erro detalhado: {e}")
+    input("Pressione ENTER para sair...")
     exit()
 
 # Loop Principal 
@@ -62,8 +110,8 @@ while True:
                 client_socket.send("UP".encode())
             if event.key == pygame.K_DOWN:
                 client_socket.send("DOWN".encode())
-        
-        # Só envia RESET se apertar ESPAÇO
+            
+            # Só envia RESET se apertar ESPAÇO
             if event.key == pygame.K_SPACE:
                 client_socket.send("RESET".encode())
 
@@ -92,6 +140,7 @@ while True:
         else:
             # Se não tiver imagem, pinta de preto (fallback)
             screen.fill('black')
+
         # 3. Renderização Condicional (Máquina de Estados Visual)
         
         if status == "WAITING":
