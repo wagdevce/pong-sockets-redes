@@ -1,6 +1,49 @@
 @echo off
+setlocal
+
+echo ==========================================
+echo      VERIFICANDO SISTEMA DE BATALHA
+echo ==========================================
+
+:: 1. Verifica se o Python esta instalado
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERRO] Python nao encontrado!
+    echo Por favor, instale o Python em python.org e marque "Add to PATH".
+    pause
+    exit /b
+)
+
+:: 2. Verifica se o Pygame existe
+echo Checando municao (Bibliotecas)...
+python -c "import pygame" >nul 2>&1
+
+if %errorlevel% neq 0 (
+    echo.
+    echo [AVISO] Pygame nao detectado.
+    echo Iniciando protocolo de instalacao automatica...
+    echo.
+    pip install pygame
+    
+    if %errorlevel% neq 0 (
+        echo [ERRO CRITICO] Falha ao instalar Pygame. Verifique sua internet.
+        pause
+        exit /b
+    )
+    echo.
+    echo [SUCESSO] Pygame instalado! Pronto para o combate.
+) else (
+    echo [OK] Sistema pronto.
+)
+
+echo.
+echo ==========================================
+echo        INICIANDO PONG MULTIPLAYER
+echo ==========================================
+echo.
+
+:: --- AQUI COMEÇA A ABERTURA DAS JANELAS 
 echo --- Invocando o Mestre (Servidor) ---
-:: Damos um nome exato para a janela: "SERVER_MASTER"
 start "SERVER_MASTER" cmd /k "python server.py"
 
 echo Aguardando o despertar do Mestre...
@@ -21,25 +64,15 @@ echo  os clientes fecharao automaticamente.
 echo ========================================================
 
 :MONITOR
-:: Espera 1 segundo antes de checar de novo (para nao gastar CPU)
 timeout /t 1 >nul
-
-:: Verifica se existe uma janela com o titulo "SERVER_MASTER"
 tasklist /FI "WINDOWTITLE eq SERVER_MASTER" 2>NUL | find /I /N "cmd.exe">NUL
-
-:: Se o ERRORLEVEL for 1, significa que nao achou a janela (Servidor fechou)
 if "%ERRORLEVEL%"=="1" (
     echo.
     echo O Mestre partiu. Encerrando a sessao...
-    
-    :: Mata as janelas dos clientes pelo titulo
     taskkill /FI "WINDOWTITLE eq CLIENTE_P1" /IM cmd.exe /F >nul 2>&1
     taskkill /FI "WINDOWTITLE eq CLIENTE_P2" /IM cmd.exe /F >nul 2>&1
-    
     echo Limpeza concluida.
     timeout /t 2 >nul
     exit
 )
-
-:: Se o servidor ainda esta la, volta para o inicio do loop
 goto MONITOR
