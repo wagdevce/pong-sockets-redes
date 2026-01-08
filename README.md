@@ -27,7 +27,7 @@ O foco principal não é apenas a jogabilidade, mas a engenharia de redes por tr
 
 ## 🛠️ Arquitetura e Tecnologias
 
-O código foi refatorado utilizando **Programação Orientada a Objetos (POO)** para melhor encapsulamento e manutenção.
+O código foi estruturado utilizando **Programação Orientada a Objetos (POO)** para melhor encapsulamento e manutenção.
 
 * **Linguagem:** Python 3.
 * **Bibliotecas:** `socket` (Networking), `threading` (Concorrência), `pickle` (Serialização de Objetos), `pygame` (Renderização).
