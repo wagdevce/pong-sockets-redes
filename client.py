@@ -1,4 +1,8 @@
-import pygame, socket, pickle, os, time
+import pygame 
+import socket 
+import pickle 
+import os 
+import time
 
 # Configurações Globais
 W, H = 1280, 700
@@ -64,7 +68,7 @@ def load_asset(path, size=None):
         return img.convert_alpha() if size else img.convert()
     except: return None
 
-# --- Inicialização ---
+# Inicialização 
 nickname, server_ip = get_user_info()
 
 pygame.init()
@@ -92,7 +96,7 @@ try:
          
     sock.connect((server_ip, port))
     
-    #  Envia o Nickname assim que conecta ---
+    #  Envia o Nickname assim que conecta 
     sock.send(f"NICK:{nickname}".encode())
    
     

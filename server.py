@@ -89,7 +89,7 @@ class PongServer:
         pontos_p2 = self.score[1]
         diff = abs(pontos_p1 - pontos_p2)
         
-        # Lógica de Vitória (5 pontos + 2 de diferença)
+        # Lógica de Vitória 
         if self.score[player_idx] >= 5 and diff >= 2:
             winner_id = 0 if player_idx == 1 else 1
             winner_name = self.client_nicks.get(winner_id, f"Player {winner_id+1}")
