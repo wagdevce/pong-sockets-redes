@@ -5,222 +5,128 @@ import pickle
 import random
 from datetime import datetime 
 
-# Configurações Gerais 
-screen_width = 1280
-screen_height = 700
-Winning_Score = 5 
-Initial_Speed = 6 
-Max_Speed = 15 
-
-# Inicialização do Pygame (utilizado apenas para cálculos geométricos da classe Rect)
-pygame.init()
-
-# Estado Global do Jogo
-# Definição das coordenadas e dimensões dos objetos (Bola e Raquetes)
-ball = pygame.Rect(0,0,50,50)
-ball.center = (screen_width/2, screen_height/2)
-
-cpu = pygame.Rect(0,0,20,100) 
-cpu.centery = screen_height/2
-
-player = pygame.Rect(0,0,20,100) 
-player.midright = (screen_width, screen_height/2)
-
-# Variáveis de controle de física e velocidade
-ball_speed_x = 6
-ball_speed_y = 6
-player_speed = 0
-cpu_speed = 0 
-
-# Variáveis de pontuação e gerenciamento de sessão
-cpu_points, player_points = 0, 0
-clients = []    
-winner = None   
-
-# Persistência de Dados
-def save_score(winner_name):
-    """ Registra o vencedor e o timestamp no arquivo de log (ranking.txt). """
-    try:
-        with open("ranking.txt", "a") as f:
-            timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
-            f.write(f"{timestamp} - Vencedor: {winner_name}\n")
-        print(f"Log de vitória registrado: {winner_name}")
-    except Exception as e:
-        print(f"Erro ao gravar arquivo de ranking: {e}")
-
-# Lógica de Física e Regras
-def reset_ball():
-    #Reinicia a posição da bola no centro da tela e inverte a direção horizontal
-    global ball_speed_x, ball_speed_y
-    ball.center = (screen_width/2, screen_height/2)
-    
-    # Define a direção aleatória onde a bola vai no começo (esquerda ou direita)
-    direction_x = random.choice([1, -1])
-    direction_y = random.choice([1 ,-1])
-
-    # Reseta para a velocidade inicial
-    ball_speed_x = Initial_Speed * direction_x
-    ball_speed_y = Initial_Speed * direction_y
-
-def animate_ball():
-    """ Calcula a movimentação da bola, colisões com bordas/raquetes e pontuação. """
-    global ball_speed_x, ball_speed_y, player_points, cpu_points, winner
-    
-    # Interrompe cálculos se houver um vencedor
-    if winner is not None:
-        return
-
-    # Atualização de posição
-    ball.x += ball_speed_x
-    ball.y += ball_speed_y
-
-    # Colisão vertical (Teto e Chão)
-    if ball.bottom >= screen_height or ball.top <= 0:
-        ball_speed_y *= -1
-    
-    # Verificação de Pontuação e Condição de Vitória
-    if ball.right >= screen_width:
-        cpu_points += 1
-        if cpu_points >= Winning_Score:
-            winner = "Jogador 2 (Esq)"
-            save_score(winner)
-        reset_ball()
+class PongServer:
+    def __init__(self):
+        # Configurações
+        self.W, self.H = 1280, 700
+        self.TCP_PORT, self.UDP_PORT = 5555, 5556
+        self.clients = []
         
-    if ball.left <= 0:
-        player_points += 1
-        if player_points >= Winning_Score:
-            winner = "Jogador 1 (Dir)"
-            save_score(winner)
-        reset_ball()
-
-    # Colisão com as Raquetes
-    if ball.colliderect(player) or ball.colliderect(cpu):
-        ball_speed_x *= -1
-
-        #Aumenta velocidade em 10% toda vez que a bola bater na raquete
-        ball_speed_x *= 1.1
-        ball_speed_y *= 1.1
-
-        ball_speed_x = max(-Max_Speed, min(ball_speed_x, Max_Speed))
-        ball_speed_y = max(-Max_Speed, min(ball_speed_y, Max_Speed))
-
-def reset_game():
-    """ Zera o placar e reinicia a partida """
-    global cpu_points, player_points, winner
-    cpu_points = 0
-    player_points = 0
-    winner = None
-    reset_ball()
-    print("Jogo reiniciado por solicitação de um jogador.")
-
-def game_loop():
-    """ 
-    Thread Principal: Gerencia o fluxo do jogo (Lobby/Partida), 
-    executa a física e realiza o broadcast do estado para os clientes.
-    """
-    global player_speed, cpu_speed, latest_ranking, winner
-    clock = pygame.time.Clock()
-    latest_ranking = []
-
-    while True:
-        # 1. Controle de Lobby: Aguarda conexão de 2 jogadores
-        if len(clients) < 2:
-            current_status = "WAITING"
-        else:
-            current_status = "PLAYING"
-
-        # 2. Execução da Física (apenas se o status for PLAYING)
-        if current_status == "PLAYING":
-            animate_ball()
-            
-            # Carrega o ranking do disco apenas na conclusão da partida
-            if winner is not None and not latest_ranking:
-                 try:
-                    with open("ranking.txt", "r") as f:
-                        latest_ranking = [line.strip() for line in f.readlines()[-5:]]
-                 except:
-                    latest_ranking = ["Nenhum registro encontrado."]
-
-            # Lógica de reinício de rodada/partida
-            if winner is None:
-                latest_ranking = []
-                player.y += player_speed
-                cpu.y += cpu_speed
-                
-                # Restrição de limites da tela para as raquetes
-                if player.top <= 0: player.top = 0
-                if player.bottom >= screen_height: player.bottom = screen_height
-                if cpu.top <= 0: cpu.top = 0
-                if cpu.bottom >= screen_height: cpu.bottom = screen_height
+        # Estado do Jogo
+        self.ball = pygame.Rect(self.W//2, self.H//2, 50, 50)
+        # players[0] é CPU (Esq), players[1] é Player (Dir)
+        self.players = [pygame.Rect(0, self.H//2, 20, 100), pygame.Rect(self.W-20, self.H//2, 20, 100)] 
+        self.speeds = [0, 0] # Velocidade vertical dos jogadores
+        self.score = [0, 0]
+        self.ball_vel = [6, 6]
+        self.winner = None
+        self.ranking = []
         
-        # 3. Serialização e Broadcast
-        # Monta o dicionário com o estado completo do jogo
-        game_state = {
-            'ball': ball,
-            'player': player,
-            'cpu': cpu,
-            'score': [cpu_points, player_points],
-            'winner': winner,
-            'ranking': latest_ranking,
-            'status': current_status 
-        }
-        
-        # Converte para bytes e envia para todos os clientes conectados
-        data = pickle.dumps(game_state)
-        for client in clients:
+        # Inicializa socket TCP
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind(('0.0.0.0', self.TCP_PORT))
+        self.sock.listen(2)
+        print(f"[INFO] Servidor Online na porta TCP {self.TCP_PORT}")
+
+    def discovery_listener(self):
+        # Escuta UDP para descoberta automática
+        udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp.bind(('0.0.0.0', self.UDP_PORT))
+        print(f"[INFO] Discovery Service (UDP) ativo na porta {self.UDP_PORT}")
+        while True:
             try:
-                client.send(data)
-            except:
-                # Remove cliente da lista em caso de falha de envio
-                clients.remove(client)
+                msg, addr = udp.recvfrom(1024)
+                if msg == b"DISCOVER_PONG_SERVER": udp.sendto(b"PONG_HERE", addr)
+            except: pass
 
-        clock.tick(60) # Mantém a taxa de atualização a 60 FPS
+    def reset_ball(self):
+        self.ball.center = (self.W//2, self.H//2)
+        # Reinicia com direção aleatória
+        self.ball_vel = [6 * random.choice([1,-1]), 6 * random.choice([1,-1])]
 
-def handle_client_input(client_socket, player_id):
-    """ Thread dedicada para processar os inputs (comandos) de um cliente específico. """
-    global player_speed, cpu_speed
-    while True:
+    def physics_loop(self):
+        clock = pygame.time.Clock()
+        while True:
+            if len(self.clients) >= 2 and not self.winner:
+                # Movimento Bola
+                self.ball.x += self.ball_vel[0]
+                self.ball.y += self.ball_vel[1]
+
+                # Colisão Parede (Teto/Chão)
+                if self.ball.top <= 0 or self.ball.bottom >= self.H: self.ball_vel[1] *= -1
+                
+                # Colisão Raquetes (Com aceleração progressiva)
+                if self.ball.colliderect(self.players[0]) or self.ball.colliderect(self.players[1]):
+                    self.ball_vel[0] *= -1.1
+                    self.ball_vel[1] *= 1.1
+                    # Limita velocidade máxima (Clamp)
+                    self.ball_vel = [max(-15, min(v, 15)) for v in self.ball_vel]
+
+                # Pontuação
+                if self.ball.left <= 0: self.score_point(1, "Jogador 1 (Dir)")
+                if self.ball.right >= self.W: self.score_point(0, "Jogador 2 (Esq)")
+
+                # Movimento Jogadores
+                for i in range(2):
+                    self.players[i].y += self.speeds[i]
+                    self.players[i].clamp_ip(pygame.Rect(0, 0, self.W, self.H))
+
+            # Broadcast (Envia estado para todos)
+            state = {
+                'ball': self.ball, 'cpu': self.players[0], 'player': self.players[1],
+                'score': self.score, 'winner': self.winner, 'ranking': self.ranking,
+                'status': "PLAYING" if len(self.clients) >= 2 else "WAITING"
+            }
+            data = pickle.dumps(state)
+            
+            # Envia para a lista de clientes
+            for c in self.clients[:]:
+                try: c.send(data)
+                except: self.clients.remove(c)
+            
+            clock.tick(60)
+
+    def score_point(self, player_idx, name):
+        self.score[player_idx] += 1
+        self.reset_ball()
+        if self.score[player_idx] >= 5:
+            self.winner = name
+            self.save_ranking(name)
+
+    def save_ranking(self, name):
         try:
-            # Recebe comandos de texto do cliente
-            request = client_socket.recv(1024).decode()
-            if not request: break
-            
-            #Verifica comando de RESET 
-            if request == "RESET":
-                reset_game()
-            
-            # Processa movimento apenas se não houver vencedor
-            if winner is None:
-                if player_id == 0: 
-                    if request == "UP": player_speed = -6
-                    elif request == "DOWN": player_speed = 6
-                    elif request == "STOP": player_speed = 0
-                elif player_id == 1: 
-                    if request == "UP": cpu_speed = -6
-                    elif request == "DOWN": cpu_speed = 6
-                    elif request == "STOP": cpu_speed = 0
-        except:
-            break
-    client_socket.close()
+            with open("ranking.txt", "a") as f:
+                f.write(f"{datetime.now().strftime('%d/%m %H:%M')} - {name}\n")
+            with open("ranking.txt", "r") as f: 
+                self.ranking = [x.strip() for x in f.readlines()[-5:]]
+        except: self.ranking = []
 
-def start_server():
-    """ Inicializa o socket TCP, realiza o bind e aceita novas conexões. """
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('0.0.0.0', 5555)) 
-    server.listen(2)
-    print("Servidor iniciado na porta 5555. Aguardando conexões...")
+    def handle_client(self, conn, p_id):
+        # Mapa de comandos para velocidade
+        cmd_map = {"UP": -6, "DOWN": 6, "STOP": 0}
+        while True:
+            try:
+                req = conn.recv(1024).decode()
+                if not req: break
+                
+                if req == "RESET": 
+                    self.score = [0,0]; self.winner = None; self.reset_ball()
+                elif self.winner is None and req in cmd_map:
+                    target_idx = 1 if p_id == 0 else 0
+                    self.speeds[target_idx] = cmd_map[req]
+            except: break
+        conn.close()
 
-    # Inicia o loop lógico do jogo em uma thread separada
-    threading.Thread(target=game_loop).start()
-
-    while True:
-        conn, addr = server.accept()
-        current_player_id = len(clients)
-        print(f"Nova conexão estabelecida: {addr} - ID Atribuído: {current_player_id}")
+    def start(self):
+        # Inicia threads em background (daemon)
+        threading.Thread(target=self.discovery_listener, daemon=True).start()
+        threading.Thread(target=self.physics_loop, daemon=True).start()
         
-        clients.append(conn)
-        # Inicia thread de input para o novo cliente
-        threading.Thread(target=handle_client_input, args=(conn, current_player_id)).start()
+        while True:
+            conn, addr = self.sock.accept()
+            print(f"[NET] Nova conexao estabelecida: {addr}")
+            self.clients.append(conn)
+            threading.Thread(target=self.handle_client, args=(conn, len(self.clients)-1)).start()
 
 if __name__ == '__main__':
-    start_server()
+    PongServer().start()
