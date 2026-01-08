@@ -95,4 +95,4 @@ Este projeto vai além do básico, implementando conceitos avançados de Redes e
 
 ## 👨‍💻 Autor
 
-Desenvolvido para a disciplina de **Redes de Computadores**.git add README.md
+Desenvolvido por Wagner Marques para disciplina de **Redes de Computadores**
