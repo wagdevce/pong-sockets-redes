@@ -1,60 +1,98 @@
 # 🪐 Pong Multiplayer - Galactic Arcade Edition
 
-> Um sistema distribuído de jogo em tempo real utilizando Sockets (TCP/UDP), Arquitetura Cliente-Servidor e Persistência de Dados.
+> Uma recriação moderna do clássico Pong com suporte a Multiplayer Online, LAN automática e persistência de dados.
 
 ![Status](https://img.shields.io/badge/Status-Finalizado-green)
 ![Python](https://img.shields.io/badge/Python-3.x-blue)
-![Lib](https://img.shields.io/badge/Lib-Pygame-yellow)
-![Architecture](https://img.shields.io/badge/Architecture-Client--Server-red)
+![Network](https://img.shields.io/badge/Network-TCP%2FUDP-orange)
 
-## 🌌 Sobre o Projeto
+## 🎮 Como Jogar (Guia Rápido)
 
-Este projeto é uma implementação avançada do clássico Pong, desenvolvida como requisito da disciplina de **Redes de Computadores**. 
+Este jogo foi projetado para ser fácil de iniciar. Siga os passos abaixo:
 
-O foco principal não é apenas a jogabilidade, mas a engenharia de redes por trás dela. O sistema utiliza uma **Arquitetura Autoritativa**, onde o servidor detém o estado global da física, prevenindo trapaças e garantindo sincronização entre clientes em diferentes redes.
-
-### ✨ Diferenciais Técnicos
-
-* **📡 Protocolo Híbrido (TCP + UDP):**
-    * **TCP (Porta 5555):** Garante a entrega confiável do estado do jogo (posição da bola, placar).
-    * **UDP (Porta 5556):** Utilizado para **Service Discovery**. O cliente realiza um *Broadcast* na rede local para encontrar o servidor automaticamente, sem necessidade de configurar IPs manualmente.
-* **💾 Persistência e Leaderboard:** Sistema de "Hall of Fame" estilo Arcade. Os dados de vitórias são persistidos em arquivo (`ranking.txt`) e exibidos no final da partida.
-* **🎭 Modo Espectador:** O servidor suporta múltiplas conexões. Se um 3º cliente se conectar, ele entra automaticamente como espectador (recebe o estado do jogo, mas não interfere nos controles).
-* **🏎️ Física Progressiva & Rally:** A bola acelera a cada rebatida. Um contador de "Rally" visual indica a intensidade da troca de bolas.
-* **🌍 Suporte WAN (Ngrok):** O cliente possui um parser inteligente para endereços do Ngrok, permitindo partidas via internet através de túneis HTTP/TCP.
+### 1. Início Rápido (Automação)
+Para rodar sem complicações, basta executar o arquivo de lote:
+* **Windows:** Clique duas vezes em `start_game.bat`.
+    * *Este script verifica se você tem Python e Pygame instalados. Se não tiver, ele instala automaticamente e abre o jogo.*
 
 ---
 
-## 🛠️ Arquitetura e Tecnologias
-
-O código foi estruturado utilizando **Programação Orientada a Objetos (POO)** para melhor encapsulamento e manutenção.
-
-* **Linguagem:** Python 3.
-* **Bibliotecas:** `socket` (Networking), `threading` (Concorrência), `pickle` (Serialização de Objetos), `pygame` (Renderização).
-* **Fluxo de Dados:**
-    1. O **Cliente** envia inputs (Teclas UP/DOWN).
-    2. O **Servidor** processa a física, colisão e regras (Vitória por 5 pontos + 2 de diferença).
-    3. O **Servidor** serializa o objeto `GameState` com `pickle`.
-    4. O **Broadcast** envia o estado atualizado para todos os clientes conectados (60 ticks/s).
+### 2. O Menu Inicial
+Ao abrir o jogo, você encontrará um terminal interativo.
+1.  **Digite seu Nickname:** Escolha um nome de até 8 letras (ex: `WAGNER`).
+2.  **Escolha o Modo de Conexão:**
+    * `[1] Rede Local (Automático)`: O jogo usa um "sonar" (UDP Broadcast) para encontrar o servidor sozinho na sua rede Wi-Fi/Cabo.
+    * `[2] Online (Manual)`: Ideal para jogar via internet (usando Ngrok). Você precisará digitar o endereço que o Host te mandar.
+    * `[3] Localhost`: Para testar sozinho no mesmo computador.
 
 ---
 
-## 📦 Instalação e Execução
+### 3. Regras da Partida
+O jogo segue regras competitivas estilo Vôlei/Tênis:
+* **Vitória:** Ganha quem chegar a **5 Pontos** primeiro.
+* **Diferença de 2:** É necessário abrir 2 pontos de vantagem para fechar o jogo (ex: se estiver 4x4, o jogo vai a 6, e assim por diante).
+* **Rally:** Quanto mais a bola troca de lado sem cair, mais o contador de "Rally" sobe e muda de cor (Branco -> Amarelo -> Vermelho).
+* **Velocidade Progressiva:** A cada batida na raquete, a bola fica 10% mais rápida.
 
-O projeto conta com um script de automação para Windows (`.bat`) que gerencia dependências e execução.
+---
 
-### Pré-requisitos
-* Python 3.x instalado e adicionado ao PATH.
+### 4. Controles
 
-### 🚀 Como Rodar (Modo Automático)
+| Ação | Tecla |
+| :--- | :---: |
+| **Mover Cima** | ⬆️ Seta Direcional Cima |
+| **Mover Baixo** | ⬇️ Seta Direcional Baixo |
+| **Parar** | Soltar a tecla |
+| **Reiniciar Jogo** | **ESPAÇO** (Apenas na tela de vitória) |
+| **Sair** | Fechar a janela |
 
-1. Clone o repositório.
-2. Execute o arquivo **`start_game.bat`**.
-    * Ele verificará se o `pygame` está instalado (e instalará se necessário).
-    * Iniciará o Servidor e dois Clientes automaticamente para teste local.
+---
 
-### 🎮 Como Jogar (Modo Manual/Rede)
+## 🌍 Jogando Online (Via Internet)
 
-**1. No Computador do Servidor (Host):**
-```bash
-python server.py
+Para jogar com amigos em outras casas, utilizamos o **Ngrok** para criar um túnel seguro.
+
+**Passo A: O Host (Quem cria o jogo)**
+1.  Inicie o `server.py` (ou use o `.bat`).
+2.  Abra o Ngrok e digite: `ngrok tcp 5555`.
+3.  Copie o endereço gerado (ex: `0.tcp.sa.ngrok.io:12345`).
+4.  Envie para o amigo.
+
+**Passo B: O Cliente (Seu amigo)**
+1.  Abra o jogo e escolha a opção **[2] Online**.
+2.  Cole o endereço que o Host enviou.
+3.  Pronto!
+
+---
+
+## 🛠️ Tecnologias e Funcionalidades
+
+Este projeto vai além do básico, implementando conceitos avançados de Redes e Engenharia de Software:
+
+* **📡 Arquitetura Híbrida (TCP + UDP):**
+    * **TCP (5555):** Garante a sincronização perfeita da física e placar.
+    * **UDP (5556):** Usado para *Service Discovery*. O cliente "grita" na rede local perguntando onde está o servidor, eliminando a necessidade de configurar IPs manualmente em LAN.
+* **💾 Persistência (Leaderboard):**
+    * O servidor mantém um arquivo `ranking.txt`.
+    * Ao final de cada partida, um "Hall of Fame" é exibido mostrando os 5 jogadores com mais vitórias na história do servidor.
+* **🛡️ Modo Espectador:**
+    * O servidor suporta múltiplas conexões. Se um 3º usuário entrar, ele é automaticamente colocado como **Espectador** (assiste à partida em tempo real, mas seus inputs são bloqueados).
+* **💻 Código Profissional:**
+    * Refatorado com **Orientação a Objetos (POO)**.
+    * Uso de `Pickle` para serialização complexa de dados.
+    * Multithreading para gerenciar física e rede simultaneamente.
+
+---
+
+## 📂 Estrutura de Arquivos
+
+* `server.py`: O "cérebro". Gerencia física, regras, ranking e conexões.
+* `client.py`: A "interface". Gerencia input do usuário e renderização gráfica.
+* `start_game.bat`: Script de automação para Windows.
+* `assets/`: Contém os sprites (bola e background).
+
+---
+
+## 👨‍💻 Autor
+
+Desenvolvido para a disciplina de **Redes de Computadores**.git add README.md
